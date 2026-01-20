@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ анкет клиентов</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        h2 {
+            color: #555;
+            margin: 20px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .upload-section, .selection-section, .result-section {
+            margin-bottom: 30px;
+        }
+        
+        .file-input-container {
+            margin-bottom: 15px;
+        }
+        
+        input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .encoding-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .encoding-selector label {
+            font-weight: bold;
+        }
+        
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .select-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .user-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            min-width: 250px;
+            background-color: white;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .copy-btn {
+            background-color: #2196F3;
+            margin-top: 15px;
+        }
+        
+        .copy-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .result-text {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .empty-field {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug-toggle {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        
+        .debug-toggle:hover {
+            background-color: #5a6268;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .select-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .user-select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анализ анкет клиентов</h1>
+        
+        <div class="upload-section">
+            <h2>1. Загрузите CSV-файл</h2>
+            <div class="file-input-container">
+                <input type="file" id="fileInput" accept=".csv">
+            </div>
+            
+            <div class="encoding-selector">
+                <label for="encodingSelect">Кодировка файла:</label>
+                <select id="encodingSelect">
+                    <option value="UTF-8">UTF-8</option>
+                    <option value="windows-1251" selected>Windows-1251 (русская)</option>
+                    <option value="ISO-8859-1">ISO-8859-1</option>
+                    <option value="KOI8-R">KOI8-R</option>
+                    <option value="cp866">CP866 (DOS)</option>
+                </select>
+                <button id="reloadFileBtn" class="hidden">Перезагрузить с выбранной кодировкой</button>
+            </div>
+            
+            <button id="debugToggle" class="debug-toggle">Показать отладочную информацию</button>
+            <div class="debug-info" id="debugInfo"></div>
+            <div id="uploadMessage" class="message hidden"></div>
+        </div>
+        
+        <div class="selection-section hidden" id="selectionSection">
+            <h2>2. Выберите клиента</h2>
+            <div class="select-container">
+                <select id="userSelect" class="user-select">
+                    <option value="">-- Выберите клиента --</option>
+                </select>
+                <button id="showDataBtn">Показать данные</button>
+            </div>
+        </div>
+        
+        <div class="result-section hidden" id="resultSection">
+            <h2>3. Данные клиента</h2>
+            <div class="result-text" id="resultText"></div>
+            <button id="copyBtn" class="copy-btn">Копировать в буфер обмена</button>
+            <div id="copyMessage" class="message hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let headers = [];
+        let currentFile = null;
+        
+        // Включение/выключение отладочной информации
+        document.getElementById('debugToggle').addEventListener('click', function() {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo.style.display === 'block') {
+                debugInfo.style.display = 'none';
+                this.textContent = 'Показать отладочную информацию';
+            } else {
+                debugInfo.style.display = 'block';
+                this.textContent = 'Скрыть отладочную информацию';
+            }
+        });
+        
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            currentFile = file;
+            loadFileWithEncoding(file, document.getElementById('encodingSelect').value);
+        });
+        
+        document.getElementById('reloadFileBtn').addEventListener('click', function() {
+            if (currentFile) {
+                loadFileWithEncoding(currentFile, document.getElementById('encodingSelect').value);
+            }
+        });
+        
+        document.getElementById('encodingSelect').addEventListener('change', function() {
+            document.getElementById('reloadFileBtn').classList.remove('hidden');
+        });
+        
+        function loadFileWithEncoding(file, encoding) {
+            document.getElementById('uploadMessage').classList.add('hidden');
+            document.getElementById('debugInfo').textContent = `Загрузка файла с кодировкой: ${encoding}...`;
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    let text = e.target.result;
+                    
+                    // Для разных кодировок используем TextDecoder
+                    if (encoding !== 'UTF-8') {
+                        // Читаем как ArrayBuffer и декодируем
+                        const arrayBuffer = e.target.result;
+                        const decoder = new TextDecoder(encoding);
+                        text = decoder.decode(arrayBuffer);
+                    }
+                    
+                    // Удаляем BOM (Byte Order Mark) если он есть
+                    if (text.charCodeAt(0) === 0xFEFF) {
+                        text = text.substring(1);
+                    }
+                    
+                    // Записываем первые 500 символов для отладки
+                    const debugText = 
+                        'Первые 500 символов файла:\n' + 
+                        '----------------------------------------\n' +
+                        text.substring(0, 500) + 
+                        '\n----------------------------------------\n' +
+                        'Всего символов в файле: ' + text.length;
+                    
+                    document.getElementById('debugInfo').textContent = debugText;
+                    
+                    parseCSV(text);
+                    
+                    document.getElementById('uploadMessage').textContent = `Файл "${file.name}" успешно загружен. Найдено ${csvData.length} записей. Кодировка: ${encoding}`;
+                    document.getElementById('uploadMessage').className = 'message success';
+                    document.getElementById('uploadMessage').classList.remove('hidden');
+                    
+                    populateUserSelect();
+                    document.getElementById('selectionSection').classList.remove('hidden');
+                    document.getElementById('resultSection').classList.add('hidden');
+                    document.getElementById('reloadFileBtn').classList.add('hidden');
+                } catch (error) {
+                    console.error('Ошибка парсинга:', error);
+                    document.getElementById('uploadMessage').textContent = 'Ошибка при чтении файла: ' + error.message;
+                    document.getElementById('uploadMessage').className = 'message error';
+                    document.getElementById('uploadMessage').classList.remove('hidden');
+                }
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('uploadMessage').textContent = 'Ошибка при чтении файла.';
+                document.getElementById('uploadMessage').className = 'message error';
+                document.getElementById('uploadMessage').classList.remove('hidden');
+            };
+            
+            if (encoding === 'UTF-8') {
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        }
+        
+        function parseCSV(text) {
+            // Разделяем текст на строки
+            const lines = text.split(/\r\n|\n|\r/);
+            
+            // Ищем строку с заголовками
+            let headerLineIndex = -1;
+            let headerLine = '';
+            
+            // Ищем строку, которая начинается с # и содержит ;Дата;id;
+            for (let i = 0; i < Math.min(20, lines.length); i++) {
+                const line = lines[i].trim();
+                
+                // Проверяем, начинается ли строка с #; и содержит ключевые слова
+                if (line.startsWith('#;') && line.includes(';Дата;') && line.includes(';id;')) {
+                    headerLineIndex = i;
+                    headerLine = line;
+                    break;
+                }
+                
+                // Проверяем альтернативные варианты (без # в начале)
+                if ((line.includes('Дата;') || line.includes('Дата')) && 
+                    (line.includes(';id;') || line.includes('id;')) && 
+                    (line.includes(';Имя;') || line.includes('Имя;'))) {
+                    headerLineIndex = i;
+                    headerLine = line;
+                    break;
+                }
+            }
+            
+            if (headerLineIndex === -1) {
+                // Показываем первые 10 строк для отладки
+                let debugLines = 'Не удалось найти заголовок. Первые 10 строк файла:\n';
+                for (let i = 0; i < Math.min(10, lines.length); i++) {
+                    debugLines += `Строка ${i}: "${lines[i]}"\n`;
+                }
+                document.getElementById('debugInfo').textContent += '\n\n' + debugLines;
+                throw new Error('Не удалось найти заголовок таблицы. Убедитесь, что файл содержит колонки: #, Дата, id, Имя, Фамилия');
+            }
+            
+            // Парсим заголовки
+            headers = parseCSVLine(headerLine);
+            
+            // Очищаем заголовки от кавычек и пробелов
+            headers = headers.map(h => {
+                h = h.trim();
+                // Удаляем кавычки в начале и конце
+                if ((h.startsWith('"') && h.endsWith('"')) || 
+                    (h.startsWith("'") && h.endsWith("'"))) {
+                    h = h.substring(1, h.length - 1);
+                }
+                return h.trim();
+            });
+            
+            // Парсим данные
+            csvData = [];
+            for (let i = headerLineIndex + 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Пропускаем пустые строки и служебные строки
+                if (!line || line === '' || line.startsWith('Отчет') || 
+                    line.startsWith('"c ') || line.startsWith('c ') ||
+                    line === ';' || line.split(';').every(cell => cell.trim() === '')) {
+                    continue;
+                }
+                
+                const row = parseCSVLine(line);
+                
+                // Проверяем, что строка содержит данные
+                if (row.length > 0 && row[0] !== '') {
+                    const rowObj = {};
+                    
+                    // Заполняем объект данными
+                    headers.forEach((header, index) => {
+                        let value = index < row.length ? row[index] : '';
+                        
+                        // Очищаем значение от кавычек
+                        value = value.trim();
+                        if ((value.startsWith('"') && value.endsWith('"')) || 
+                            (value.startsWith("'") && value.endsWith("'"))) {
+                            value = value.substring(1, value.length - 1);
+                        }
+                        
+                        rowObj[header] = value;
+                    });
+                    
+                    csvData.push(rowObj);
+                }
+            }
+            
+            // Добавляем информацию о заголовках в отладочную информацию
+            document.getElementById('debugInfo').textContent += 
+                '\n\nНайденные заголовки (' + headers.length + ' колонок):\n' +
+                headers.map((h, i) => `${i}: "${h}"`).join('\n') +
+                '\n\nПервая запись:\n' + 
+                JSON.stringify(csvData[0] || {}, null, 2);
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            let quoteChar = '';
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = i + 1 < line.length ? line[i + 1] : '';
+                
+                if ((char === '"' || char === "'") && !inQuotes) {
+                    // Начало кавычек
+                    inQuotes = true;
+                    quoteChar = char;
+                    current += char;
+                } else if (char === quoteChar && inQuotes) {
+                    // Проверяем, не экранирована ли кавычка
+                    if (nextChar === quoteChar) {
+                        // Экранированная кавычка
+                        current += char;
+                        i++; // Пропускаем следующую кавычку
+                    } else {
+                        // Конец кавычек
+                        inQuotes = false;
+                        current += char;
+                    }
+                } else if (char === ';' && !inQuotes) {
+                    // Конец ячейки
+                    result.push(current);
+                    current = '';
+                } else {
+                    // Обычный символ
+                    current += char;
+                }
+            }
+            
+            // Добавляем последнюю ячейку
+            result.push(current);
+            
+            return result;
+        }
+        
+        function populateUserSelect() {
+            const select = document.getElementById('userSelect');
+            select.innerHTML = '<option value="">-- Выберите клиента --</option>';
+            
+            csvData.forEach((row, index) => {
+                const name = row['Имя'] || row['имя'] || 'Без имени';
+                const surname = row['Фамилия'] || row['фамилия'] || '';
+                const id = row['id'] || '';
+                const displayName = `${name} ${surname}${id ? ` (ID: ${id})` : ''}`;
+                
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = displayName;
+                select.appendChild(option);
+            });
+        }
+        
+        document.getElementById('showDataBtn').addEventListener('click', function() {
+            const select = document.getElementById('userSelect');
+            const selectedIndex = select.value;
+            
+            if (selectedIndex === '') {
+                alert('Пожалуйста, выберите клиента');
+                return;
+            }
+            
+            const userData = csvData[selectedIndex];
+            displayUserData(userData);
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('copyMessage').classList.add('hidden');
+        });
+        
+        function displayUserData(userData) {
+            // Сопоставление заголовков с вопросами
+            const questionMap = {
+                '#': '1. Порядковый номер:',
+                'id': '3. ID пользователя:',
+                'Имя': '7. Имя:',
+                'Фамилия': '8. Фамилия:',
+                'Дата рождения': '9. Дата рождения:',
+                'Пол': '10. Пол:',
+                'Как мне к вам обращаться?': '11. Как мне к вам обращаться?',
+                'Ваша конечная цель (например, потеря веса, набор мышечной массы, улучшение выносливости, повышение физической активности, сушка и т. д.).': '12. Ваша конечная цель:',
+                'Ваш уровень подготовки и опыт в тренировках (новичок, средний, опытный).': '13. Ваш уровень подготовки и опыт в тренировках:',
+                'Есть ли какие-либо медицинские ограничения или заболевания, которые могут повлиять на вашу тренировочную программу или питание?': '14. Есть ли медицинские ограничения или заболевания?',
+                'Был ли опыт каких-либо диет? Если да, то каких, как долго, какой результат был достигнут?': '15. Был ли опыт диет? Если да, то каких?',
+                'Какие были изменение веса тела за год?': '16. Какие были изменения веса за год?',
+                'Сколько времени в неделю вы готовы уделять тренировкам?': '17. Сколько времени в неделю готовы уделять тренировкам?',
+                'Каковы ваши пищевые предпочтения и ограничения (например, вегетарианство, аллергии)?': '18. Пищевые предпочтения и ограничения:',
+                'Тип вашей работы (сидячая, разъездная) и график работы?': '19. Тип работы и график:',
+                'Сколько у вас приемов пищи в течении дня?': '20. Сколько приёмов пищи в день?',
+                'Сколько часов вы спите в сутки?': '21. Сколько часов спите в сутки?',
+                'Сколько воды выпиваете в течение дня?': '22. Сколько воды пьёте в день?',
+                'Есть ли у вас какие-либо особенности в области пищеварения или метаболизма, о которых стоит знать?': '23. Особенности пищеварения или метаболизма:'
+            };
+            
+            // Порядок отображения вопросов
+            const displayOrder = [
+                '#', 'id', 'Имя', 'Фамилия', 'Дата рождения', 'Пол',
+                'Как мне к вам обращаться?',
+                'Ваша конечная цель (например, потеря веса, набор мышечной массы, улучшение выносливости, повышение физической активности, сушка и т. д.).',
+                'Ваш уровень подготовки и опыт в тренировках (новичок, средний, опытный).',
+                'Есть ли какие-либо медицинские ограничения или заболевания, которые могут повлиять на вашу тренировочную программу или питание?',
+                'Был ли опыт каких-либо диет? Если да, то каких, как долго, какой результат был достигнут?',
+                'Какие были изменение веса тела за год?',
+                'Сколько времени в неделю вы готовы уделять тренировкам?',
+                'Каковы ваши пищевые предпочтения и ограничения (например, вегетарианство, аллергии)?',
+                'Тип вашей работы (сидячая, разъездная) и график работы?',
+                'Сколько у вас приемов пищи в течении дня?',
+                'Сколько часов вы спите в сутки?',
+                'Сколько воды выпиваете в течение дня?',
+                'Есть ли у вас какие-либо особенности в области пищеварения или метаболизма, о которых стоит знать?'
+            ];
+            
+            let resultText = '';
+            
+            displayOrder.forEach(header => {
+                // Ищем заголовок в разных регистрах
+                let actualHeader = header;
+                if (!userData.hasOwnProperty(header)) {
+                    // Пробуем найти в нижнем регистре
+                    const lowerHeader = header.toLowerCase();
+                    for (const key in userData) {
+                        if (key.toLowerCase() === lowerHeader) {
+                            actualHeader = key;
+                            break;
+                        }
+                    }
+                }
+                
+                if (questionMap[header]) {
+                    let answer = userData[actualHeader] || '';
+                    if (answer === '') {
+                        answer = '(пусто)';
+                    }
+                    
+                    resultText += `${questionMap[header]}\nОтвет: ${answer}\n\n`;
+                }
+            });
+            
+            document.getElementById('resultText').textContent = resultText;
+        }
+        
+        document.getElementById('copyBtn').addEventListener('click', async function() {
+            const textToCopy = document.getElementById('resultText').textContent;
+            
+            if (!textToCopy.trim()) {
+                document.getElementById('copyMessage').textContent = 'Нет данных для копирования';
+                document.getElementById('copyMessage').className = 'message error';
+                document.getElementById('copyMessage').classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                document.getElementById('copyMessage').textContent = 'Текст успешно скопирован в буфер обмена!';
+                document.getElementById('copyMessage').className = 'message success';
+                document.getElementById('copyMessage').classList.remove('hidden');
+                
+                // Скрыть сообщение через 3 секунды
+                setTimeout(() => {
+                    document.getElementById('copyMessage').classList.add('hidden');
+                }, 3000);
+            } catch (err) {
+                console.error('Ошибка копирования:', err);
+                // Fallback для старых браузеров
+                fallbackCopyTextToClipboard(textToCopy);
+            }
+        });
+        
+        // Fallback для старых браузеров
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    document.getElementById('copyMessage').textContent = 'Текст успешно скопирован в буфер обмена!';
+                    document.getElementById('copyMessage').className = 'message success';
+                    document.getElementById('copyMessage').classList.remove('hidden');
+                } else {
+                    throw new Error('Не удалось скопировать');
+                }
+            } catch (err) {
+                document.getElementById('copyMessage').textContent = 'Не удалось скопировать текст: ' + err.message;
+                document.getElementById('copyMessage').className = 'message error';
+                document.getElementById('copyMessage').classList.remove('hidden');
+            }
+            
+            document.body.removeChild(textArea);
+            
+            setTimeout(() => {
+                document.getElementById('copyMessage').classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
